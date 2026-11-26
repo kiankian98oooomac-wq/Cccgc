@@ -14,12 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip project (apk.zip)
+      - name: Unzip project
         run: |
           rm -rf proj && mkdir proj
-          unzip -q apk.zip -d proj
+          Z=$(find . -maxdepth 2 -iname "*.zip" -not -path "./proj/*" -not -path "./.git/*" | head -1)
+          if [ -z "$Z" ]; then echo "No .zip file found in repository"; ls -la; exit 1; fi
+          echo "Using: $Z"
+          unzip -q "$Z" -d proj
           S=$(find proj -maxdepth 3 \( -name settings.gradle -o -name settings.gradle.kts \) | head -1)
-          if [ -z "$S" ]; then echo "settings.gradle not found inside apk.zip"; exit 1; fi
+          if [ -z "$S" ]; then echo "settings.gradle not found inside $Z"; exit 1; fi
           echo "PROJ_DIR=$(dirname "$S")" >> "$GITHUB_ENV"
 
       - name: Set up JDK 17
@@ -28,7 +31,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # Android SDK روی ubuntu-latest از قبل نصب است؛ فقط لایسنس‌ها را تایید می‌کنیم (خطا نمی‌دهد)
       - name: Accept Android licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
